@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  passwordHash       String
+  role               Role          @default(USER)
+  secretKey          String        @unique @default(uuid())
+  discordWebhook     String?
+  emailNotifEnabled  Boolean       @default(false)
+  refreshTimeoutMins Int           @default(1)
+  createdAt          DateTime      @default(now())
+  phoneNumbers       PhoneNumber[]
+}
+
+model PhoneNumber {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  twilioSid   String      @unique
+  phoneNumber String      @unique
+  countryType CountryType
+  status      Status      @default(ACTIVE)
+  renewalDate DateTime
+  createdAt   DateTime    @default(now())
+  messages    Message[]
+}
+
+model Message {
+  id            String      @id @default(uuid())
+  phoneNumberId String
+  phoneNumber   PhoneNumber @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  fromNumber    String
+  body          String
+  receivedAt    DateTime    @default(now())
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum CountryType {
+  UK
+  EU
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
