@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     where: { userId: session.user.id },
     select: { id: true },
   })
-  const numberIds = userNumbers.map((n) => n.id)
+  const numberIds = userNumbers.map((n: { id: string }) => n.id)
 
   const where = {
     phoneNumberId: { in: numberIds },
