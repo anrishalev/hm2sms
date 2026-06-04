@@ -21,7 +21,7 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user
       const pathname = nextUrl.pathname
 
-      const publicPaths = ['/login', '/register', '/api/webhook/sms', '/api/admin/register']
+      const publicPaths = ['/login', '/register', '/api/auth', '/api/webhook/sms', '/api/admin/register']
       if (publicPaths.some((p) => pathname.startsWith(p))) return true
       if (!isLoggedIn) return false
       if ((pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) && auth?.user?.role !== 'ADMIN') {

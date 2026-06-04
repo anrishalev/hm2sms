@@ -20,11 +20,22 @@ export async function GET(_req?: NextRequest) {
       role: true,
       createdAt: true,
       _count: { select: { phoneNumbers: true } },
+      phoneNumbers: {
+        select: { countryType: true },
+        where: { status: 'ACTIVE' },
+      },
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  return NextResponse.json({ users })
+  const usersWithCounts = users.map(u => ({
+    ...u,
+    ukCount: u.phoneNumbers.filter(n => n.countryType === 'UK').length,
+    euCount: u.phoneNumbers.filter(n => n.countryType === 'EU').length,
+    phoneNumbers: undefined,
+  }))
+
+  return NextResponse.json({ users: usersWithCounts })
 }
 
 export async function POST(req: NextRequest) {

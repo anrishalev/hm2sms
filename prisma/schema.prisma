@@ -27,6 +27,7 @@ model PhoneNumber {
   twilioSid   String      @unique
   phoneNumber String      @unique
   countryType CountryType
+  country     String?
   status      Status      @default(ACTIVE)
   renewalDate DateTime
   createdAt   DateTime    @default(now())

@@ -5,30 +5,51 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
-const WEBHOOK_URL = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhook/sms`
-const EU_COUNTRIES = ['DE', 'FR', 'NL', 'ES', 'BE']
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+const WEBHOOK_URL = appUrl.startsWith('http://localhost') ? undefined : `${appUrl}/api/webhook/sms`
+
+// Fetch approved bundle countries from Twilio automatically
+async function getApprovedEUCountries(): Promise<string[]> {
+  try {
+    const bundles = await client.numbers.v2.regulatoryCompliance.bundles.list({
+      status: 'twilio-approved',
+    })
+    const countries = bundles
+      .map((b) => b.isoCountry)
+      .filter((c): c is string => !!c && c !== 'GB')
+    return countries.length ? countries : ['IE', 'DE', 'FR', 'NL', 'ES', 'BE']
+  } catch {
+    return ['IE', 'DE', 'FR', 'NL', 'ES', 'BE']
+  }
+}
 
 export async function buyUKNumber() {
-  const available = await client.availablePhoneNumbers('GB').local.list({ limit: 1, smsEnabled: true })
+  const available = await client.availablePhoneNumbers('GB').mobile.list({ limit: 1 })
   if (!available.length) throw new Error('No UK numbers available')
 
   const purchased = await client.incomingPhoneNumbers.create({
     phoneNumber: available[0].phoneNumber,
-    smsUrl: WEBHOOK_URL,
-    smsMethod: 'POST',
+    bundleSid: process.env.TWILIO_BUNDLE_SID,
+    ...(WEBHOOK_URL ? { smsUrl: WEBHOOK_URL, smsMethod: 'POST' } : {}),
   })
-  return { sid: purchased.sid, phoneNumber: purchased.phoneNumber }
+  return { sid: purchased.sid, phoneNumber: purchased.phoneNumber, country: 'GB' }
 }
 
 export async function buyEUNumber() {
-  for (const country of EU_COUNTRIES) {
+  const countries = await getApprovedEUCountries()
+  for (const country of countries) {
     try {
-      const available = await client.availablePhoneNumbers(country).local.list({ limit: 1, smsEnabled: true })
+      const available = await client.availablePhoneNumbers(country).local.list({ limit: 1 })
       if (!available.length) continue
+      const bundles = await client.numbers.v2.regulatoryCompliance.bundles.list({
+        status: 'twilio-approved',
+        isoCountry: country,
+      })
+      const bundleSid = bundles[0]?.sid
       const purchased = await client.incomingPhoneNumbers.create({
         phoneNumber: available[0].phoneNumber,
-        smsUrl: WEBHOOK_URL,
-        smsMethod: 'POST',
+        ...(bundleSid ? { bundleSid } : {}),
+        ...(WEBHOOK_URL ? { smsUrl: WEBHOOK_URL, smsMethod: 'POST' } : {}),
       })
       return { sid: purchased.sid, phoneNumber: purchased.phoneNumber, country }
     } catch {

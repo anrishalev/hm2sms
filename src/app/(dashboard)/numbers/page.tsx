@@ -1,7 +1,32 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+
+function countryFlag(code: string) {
+  return code.toUpperCase().split('').map(c =>
+    String.fromCodePoint(c.charCodeAt(0) + 127397)
+  ).join('')
+}
+
+function exportCSV(numbers: PhoneNumber[]) {
+  const rows = [
+    ['Phone Number', 'Country', 'Type', 'Status', 'Renewal Date'],
+    ...numbers.map(n => [
+      n.phoneNumber,
+      n.country ?? n.countryType,
+      n.countryType,
+      n.status,
+      n.renewalDate.slice(0, 10),
+    ]),
+  ]
+  const csv = rows.map(r => r.join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = 'numbers.csv'
+  a.click()
+}
 
 interface PhoneNumber {
   id: string
@@ -9,16 +34,22 @@ interface PhoneNumber {
   renewalDate: string
   status: string
   countryType: string
+  country: string | null
 }
 
 export default function NumbersPage() {
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'ADMIN'
   const [numbers, setNumbers] = useState<PhoneNumber[]>([])
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [buying, setBuying] = useState(false)
   const [buyType, setBuyType] = useState<'UK' | 'EU'>('UK')
+  const [buyQty, setBuyQty] = useState(1)
   const [buyError, setBuyError] = useState('')
+  const [buyResult, setBuyResult] = useState('')
+  const [pricing, setPricing] = useState<{ country: string; price: number | null; currency: string }[]>([])
 
   const fetchNumbers = useCallback(async () => {
     const params = new URLSearchParams()
@@ -29,22 +60,26 @@ export default function NumbersPage() {
   }, [search])
 
   useEffect(() => { fetchNumbers() }, [fetchNumbers])
+  useEffect(() => {
+    fetch('/api/pricing').then(r => r.json()).then(d => setPricing(d.pricing ?? []))
+  }, [])
 
   async function handleBuy() {
     setBuying(true)
     setBuyError('')
+    setBuyResult('')
     const res = await fetch('/api/numbers/buy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: buyType }),
+      body: JSON.stringify({ type: buyType, quantity: buyQty }),
     })
+    const d = await res.json()
     setBuying(false)
-    if (!res.ok) {
-      const d = await res.json()
-      setBuyError(d.error ?? 'Failed to buy number')
+    if (d.succeeded === 0) {
+      setBuyError(d.results?.[0]?.error ?? 'Failed to buy numbers')
       return
     }
-    setShowModal(false)
+    setBuyResult(`✓ ${d.succeeded} number${d.succeeded > 1 ? 's' : ''} bought${d.failed > 0 ? `, ${d.failed} failed` : ''}`)
     fetchNumbers()
   }
 
@@ -67,8 +102,9 @@ export default function NumbersPage() {
           />
           <Button onClick={() => setSearch(searchInput)}>Search</Button>
           <Button variant="danger" onClick={() => { setSearchInput(''); setSearch('') }}>Clear</Button>
-          <div className="ml-auto">
-            <Button onClick={() => { setShowModal(true); setBuyError('') }}>BUY MORE NUMBERS</Button>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" onClick={() => exportCSV(numbers)} disabled={numbers.length === 0}>EXPORT CSV</Button>
+            {isAdmin && <Button onClick={() => { setShowModal(true); setBuyError(''); setBuyResult('') }}>BUY MORE NUMBERS</Button>}
           </div>
         </div>
 
@@ -76,6 +112,7 @@ export default function NumbersPage() {
           <thead>
             <tr className="text-left border-b border-gray-200">
               <th className="pb-3 font-semibold">Phone Number</th>
+              <th className="pb-3 font-semibold">Country</th>
               <th className="pb-3 font-semibold">Renewal Date</th>
               <th className="pb-3 font-semibold">Status</th>
               <th className="pb-3 font-semibold"></th>
@@ -84,12 +121,16 @@ export default function NumbersPage() {
           <tbody>
             {numbers.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-400 text-sm">No numbers yet</td>
+                <td colSpan={5} className="py-8 text-center text-gray-400 text-sm">No numbers yet</td>
               </tr>
             )}
             {numbers.map((n) => (
               <tr key={n.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3">{n.phoneNumber}</td>
+                <td className="py-3 font-mono">{n.phoneNumber}</td>
+                <td className="py-3">
+                  <span className="text-lg">{n.country ? countryFlag(n.country) : ''}</span>
+                  <span className="ml-1 text-xs text-gray-500">{n.country ?? n.countryType}</span>
+                </td>
                 <td className="py-3">{n.renewalDate.slice(0, 10)}</td>
                 <td className="py-3 text-green-500 font-medium">{n.status === 'ACTIVE' ? 'Active' : 'Inactive'}</td>
                 <td className="py-3">
@@ -106,7 +147,7 @@ export default function NumbersPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 w-80 space-y-4 shadow-xl">
-            <h2 className="font-bold text-lg">Buy a Number</h2>
+            <h2 className="font-bold text-lg">Buy Numbers</h2>
             <div className="flex gap-3">
               {(['UK', 'EU'] as const).map((t) => (
                 <button
@@ -118,15 +159,33 @@ export default function NumbersPage() {
                 </button>
               ))}
             </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Quantity (1–100)</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={buyQty}
+                onChange={e => setBuyQty(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+              />
+            </div>
             <p className="text-xs text-gray-500">
-              {buyType === 'UK' ? 'UK number (~$1.15/mo)' : 'EU number — DE/FR/NL/ES/BE (~$1–2/mo)'}
+              {(() => {
+                const country = buyType === 'UK' ? 'GB' : 'IE'
+                const entry = pricing.find(p => p.country === country)
+                const sym = entry?.currency === 'GBP' ? '£' : '$'
+                const price = entry?.price ?? (buyType === 'UK' ? 1.89 : 1.21)
+                return `${buyType === 'UK' ? 'UK mobile' : 'EU'} — ${sym}${(price * buyQty).toFixed(2)}/mo`
+              })()}
             </p>
             {buyError && <p className="text-red-500 text-xs">{buyError}</p>}
+            {buyResult && <p className="text-green-600 text-xs">{buyResult}</p>}
             <div className="flex gap-3">
               <Button onClick={handleBuy} disabled={buying} className="flex-1">
-                {buying ? 'Buying...' : 'Confirm'}
+                {buying ? `Buying ${buyQty}...` : `Buy ${buyQty} Number${buyQty > 1 ? 's' : ''}`}
               </Button>
-              <Button variant="outline" onClick={() => setShowModal(false)} className="flex-1">
+              <Button variant="outline" onClick={() => { setShowModal(false); setBuyResult('') }} className="flex-1">
                 Cancel
               </Button>
             </div>
