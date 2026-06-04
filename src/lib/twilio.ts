@@ -15,7 +15,7 @@ async function getApprovedEUCountries(): Promise<string[]> {
       status: 'twilio-approved',
     })
     const countries = bundles
-      .map((b) => b.isoCountry)
+      .map((b) => (b as any).isoCountry)
       .filter((c): c is string => !!c && c !== 'GB')
     return countries.length ? countries : ['IE', 'DE', 'FR', 'NL', 'ES', 'BE']
   } catch {
