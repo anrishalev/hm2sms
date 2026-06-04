@@ -20,7 +20,7 @@ export async function GET() {
           const price = mobile ?? local
           return {
             country,
-            price: price ? parseFloat(price.currentPrice) : null,
+            price: price?.currentPrice != null ? parseFloat(String(price.currentPrice)) : null,
             currency: data.priceUnit,
           }
         } catch {
