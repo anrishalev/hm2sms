@@ -10,17 +10,7 @@ export async function sendDiscordNotification(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      embeds: [
-        {
-          title: `New SMS on ${toNumber}`,
-          color: 0x5ba4cf,
-          fields: [
-            { name: 'From', value: fromNumber, inline: true },
-            { name: 'Message', value: body, inline: false },
-            { name: 'Time', value: new Date().toUTCString(), inline: false },
-          ],
-        },
-      ],
+      content: `${toNumber}: ${body}`,
     }),
   })
 }
