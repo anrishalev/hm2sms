@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     try {
       const twilioMsgs = await client.messages.list({
         to: dbNum.phoneNumber,
-        limit: 100,
+        limit: 1000,
       })
       for (const msg of twilioMsgs) {
         if (existingMsgIds.has(msg.sid)) continue

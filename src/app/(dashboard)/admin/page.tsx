@@ -142,7 +142,10 @@ export default function AdminPage() {
     const data = await res.json()
     setSyncing(false)
     if (res.ok) {
-      setSyncMsg(data.added > 0 ? `✓ Synced ${data.added} number(s): ${data.numbers.join(', ')}` : '✓ All numbers already in sync')
+      const parts = []
+      if (data.numbersAdded > 0) parts.push(`${data.numbersAdded} number(s) imported`)
+      if (data.messagesAdded > 0) parts.push(`${data.messagesAdded} message(s) imported`)
+      setSyncMsg(parts.length > 0 ? `✓ ${parts.join(', ')}` : '✓ Everything already in sync')
       fetchUsers()
     } else {
       setSyncMsg(data.error ?? 'Sync failed')
