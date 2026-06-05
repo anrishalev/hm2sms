@@ -14,13 +14,8 @@ export async function POST(req: NextRequest) {
 
   const [twilioNumbers, dbNumbers] = await Promise.all([
     client.incomingPhoneNumbers.list({ limit: 1000 }),
-    prisma.phoneNumber.findMany({ select: { twilioSid: true } }),
+    prisma.phoneNumber.findMany({ select: { twilioSid: true, id: true, phoneNumber: true } }),
   ])
-
-  const dbSids = new Set(dbNumbers.map(n => n.twilioSid))
-  const missing = twilioNumbers.filter(n => !dbSids.has(n.sid))
-
-  if (missing.length === 0) return NextResponse.json({ added: 0 })
 
   const renewalDate = new Date()
   renewalDate.setMonth(renewalDate.getMonth() + 1)
@@ -28,30 +23,60 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? ''
   const webhookUrl = appUrl.startsWith('http://localhost') ? undefined : `${appUrl}/api/webhook/sms`
 
-  await Promise.all(
-    missing.map(async n => {
-      // Update webhook on Twilio if missing
-      if (webhookUrl && !n.smsUrl) {
-        await client.incomingPhoneNumbers(n.sid).update({ smsUrl: webhookUrl, smsMethod: 'POST' }).catch(() => {})
-      }
+  // Sync missing numbers
+  const dbSids = new Set(dbNumbers.map(n => n.twilioSid))
+  const missingNumbers = twilioNumbers.filter(n => !dbSids.has(n.sid))
 
-      const phone = n.phoneNumber
-      const isUK = phone.startsWith('+44')
-      const countryType = isUK ? 'UK' : 'EU'
-      const country = isUK ? 'GB' : (n.phoneNumber.startsWith('+353') ? 'IE' : n.phoneNumber.startsWith('+49') ? 'DE' : n.phoneNumber.startsWith('+33') ? 'FR' : null)
-
-      await prisma.phoneNumber.create({
-        data: {
-          userId,
-          twilioSid: n.sid,
-          phoneNumber: phone,
-          countryType,
-          country,
-          renewalDate,
-        },
-      })
+  for (const n of missingNumbers) {
+    if (webhookUrl && !n.smsUrl) {
+      await client.incomingPhoneNumbers(n.sid).update({ smsUrl: webhookUrl, smsMethod: 'POST' }).catch(() => {})
+    }
+    const phone = n.phoneNumber
+    const isUK = phone.startsWith('+44')
+    const countryType = isUK ? 'UK' : 'EU'
+    const country = isUK ? 'GB' : (phone.startsWith('+353') ? 'IE' : phone.startsWith('+49') ? 'DE' : phone.startsWith('+33') ? 'FR' : null)
+    await prisma.phoneNumber.create({
+      data: { userId, twilioSid: n.sid, phoneNumber: phone, countryType, country, renewalDate },
     })
+  }
+
+  // Sync messages for all numbers now in DB
+  const allDbNumbers = await prisma.phoneNumber.findMany({
+    select: { id: true, phoneNumber: true },
+  })
+  const existingMsgIds = new Set(
+    (await prisma.message.findMany({ select: { id: true } })).map(m => m.id)
   )
 
-  return NextResponse.json({ added: missing.length, numbers: missing.map(n => n.phoneNumber) })
+  let messagesAdded = 0
+  for (const dbNum of allDbNumbers) {
+    try {
+      const twilioMsgs = await client.messages.list({
+        to: dbNum.phoneNumber,
+        limit: 100,
+      })
+      for (const msg of twilioMsgs) {
+        if (existingMsgIds.has(msg.sid)) continue
+        if (!msg.body || !msg.from) continue
+        await prisma.message.create({
+          data: {
+            id: msg.sid,
+            phoneNumberId: dbNum.id,
+            fromNumber: msg.from,
+            body: msg.body,
+            receivedAt: new Date(msg.dateSent ?? msg.dateCreated),
+          },
+        }).catch(() => {})
+        messagesAdded++
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return NextResponse.json({
+    numbersAdded: missingNumbers.length,
+    messagesAdded,
+    numbers: missingNumbers.map(n => n.phoneNumber),
+  })
 }
