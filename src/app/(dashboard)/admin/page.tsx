@@ -225,7 +225,7 @@ export default function AdminPage() {
             <select value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}
               className="w-full px-4 py-2 bg-gray-100 rounded text-sm" required>
               <option value="">Select user...</option>
-              {users.filter((u) => u.role === 'USER').map((u) => (
+              {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.email} ({u._count.phoneNumbers} numbers)</option>
               ))}
             </select>
