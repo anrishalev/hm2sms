@@ -9,14 +9,19 @@ export async function POST(req: NextRequest) {
   const to = formData.get('To') as string
   const from = formData.get('From') as string
   const body = formData.get('Body') as string
+  const messageSid = formData.get('MessageSid') as string
 
   // Process in background — don't block Twilio response
   ;(async () => {
     const phoneNumber = await prisma.phoneNumber.findUnique({ where: { phoneNumber: to } })
     if (!phoneNumber) return
 
+    // Deduplicate using Twilio MessageSid
+    const existing = messageSid ? await prisma.message.findUnique({ where: { id: messageSid } }) : null
+    if (existing) return
+
     await prisma.message.create({
-      data: { phoneNumberId: phoneNumber.id, fromNumber: from, body },
+      data: { id: messageSid || undefined, phoneNumberId: phoneNumber.id, fromNumber: from, body },
     }).catch(() => {})
 
     const user = await prisma.user.findUnique({
