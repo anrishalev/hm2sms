@@ -45,6 +45,9 @@ export default function AdminPage() {
   const [resetUserId, setResetUserId] = useState<string | null>(null)
   const [resetPassword, setResetPassword] = useState('')
   const [resetMsg, setResetMsg] = useState('')
+  const [syncUserId, setSyncUserId] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
 
   async function fetchUsers() {
     const res = await fetch('/api/admin/users')
@@ -127,6 +130,25 @@ export default function AdminPage() {
     }
   }
 
+  async function handleSync(e: React.FormEvent) {
+    e.preventDefault()
+    setSyncing(true)
+    setSyncMsg('')
+    const res = await fetch('/api/admin/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: syncUserId }),
+    })
+    const data = await res.json()
+    setSyncing(false)
+    if (res.ok) {
+      setSyncMsg(data.added > 0 ? `✓ Synced ${data.added} number(s): ${data.numbers.join(', ')}` : '✓ All numbers already in sync')
+      fetchUsers()
+    } else {
+      setSyncMsg(data.error ?? 'Sync failed')
+    }
+  }
+
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault()
     if (!resetUserId) return
@@ -188,6 +210,28 @@ export default function AdminPage() {
           </form>
         </section>
       </div>
+
+      {/* Sync from Twilio */}
+      <section className="bg-white rounded-lg p-6 shadow-sm">
+        <h2 className="font-bold mb-1">Sync Numbers from Twilio</h2>
+        <p className="text-xs text-gray-400 mb-4">Import numbers bought directly on Twilio console into the dashboard</p>
+        <form onSubmit={handleSync} className="flex gap-3 items-end flex-wrap">
+          <div className="flex-1 min-w-48">
+            <label className="text-xs text-gray-500 block mb-1">Assign to user</label>
+            <select value={syncUserId} onChange={(e) => setSyncUserId(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-100 rounded text-sm" required>
+              <option value="">Select user...</option>
+              {users.filter((u) => u.role === 'USER').map((u) => (
+                <option key={u.id} value={u.id}>{u.email}</option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" disabled={syncing}>
+            {syncing ? 'Syncing...' : 'Sync from Twilio'}
+          </Button>
+          {syncMsg && <p className={`text-sm w-full ${syncMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>{syncMsg}</p>}
+        </form>
+      </section>
 
       {/* Usage & Billing Overview */}
       {users.filter(u => u.role === 'USER').length > 0 && (() => {
