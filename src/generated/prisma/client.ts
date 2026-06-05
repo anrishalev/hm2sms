@@ -56,3 +56,8 @@ export type PhoneNumber = Prisma.PhoneNumberModel
  * 
  */
 export type Message = Prisma.MessageModel
+/**
+ * Model ReleasedNumber
+ * 
+ */
+export type ReleasedNumber = Prisma.ReleasedNumberModel

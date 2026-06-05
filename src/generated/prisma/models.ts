@@ -11,4 +11,5 @@
 export type * from './models/User'
 export type * from './models/PhoneNumber'
 export type * from './models/Message'
+export type * from './models/ReleasedNumber'
 export type * from './commonInputTypes'

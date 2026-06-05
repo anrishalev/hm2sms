@@ -13,6 +13,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   await releaseNumber(number.twilioSid)
   await prisma.phoneNumber.delete({ where: { id } })
+  await prisma.releasedNumber.upsert({
+    where: { phoneNumber: number.phoneNumber },
+    update: { releasedAt: new Date() },
+    create: { phoneNumber: number.phoneNumber },
+  })
   return NextResponse.json({ ok: true })
 }
 

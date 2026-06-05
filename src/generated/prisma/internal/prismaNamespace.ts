@@ -386,7 +386,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   PhoneNumber: 'PhoneNumber',
-  Message: 'Message'
+  Message: 'Message',
+  ReleasedNumber: 'ReleasedNumber'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -402,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "phoneNumber" | "message"
+    modelProps: "user" | "phoneNumber" | "message" | "releasedNumber"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -628,6 +629,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ReleasedNumber: {
+      payload: Prisma.$ReleasedNumberPayload<ExtArgs>
+      fields: Prisma.ReleasedNumberFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ReleasedNumberFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ReleasedNumberFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        findFirst: {
+          args: Prisma.ReleasedNumberFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ReleasedNumberFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        findMany: {
+          args: Prisma.ReleasedNumberFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>[]
+        }
+        create: {
+          args: Prisma.ReleasedNumberCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        createMany: {
+          args: Prisma.ReleasedNumberCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ReleasedNumberCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>[]
+        }
+        delete: {
+          args: Prisma.ReleasedNumberDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        update: {
+          args: Prisma.ReleasedNumberUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        deleteMany: {
+          args: Prisma.ReleasedNumberDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ReleasedNumberUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ReleasedNumberUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>[]
+        }
+        upsert: {
+          args: Prisma.ReleasedNumberUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReleasedNumberPayload>
+        }
+        aggregate: {
+          args: Prisma.ReleasedNumberAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateReleasedNumber>
+        }
+        groupBy: {
+          args: Prisma.ReleasedNumberGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReleasedNumberGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ReleasedNumberCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReleasedNumberCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -706,6 +781,15 @@ export const MessageScalarFieldEnum = {
 } as const
 
 export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
+
+
+export const ReleasedNumberScalarFieldEnum = {
+  id: 'id',
+  phoneNumber: 'phoneNumber',
+  releasedAt: 'releasedAt'
+} as const
+
+export type ReleasedNumberScalarFieldEnum = (typeof ReleasedNumberScalarFieldEnum)[keyof typeof ReleasedNumberScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -955,6 +1039,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   phoneNumber?: Prisma.PhoneNumberOmit
   message?: Prisma.MessageOmit
+  releasedNumber?: Prisma.ReleasedNumberOmit
 }
 
 /* Types for Logging */

@@ -21,8 +21,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (user.role === 'ADMIN') return NextResponse.json({ error: 'Cannot delete admin' }, { status: 400 })
 
   // Release all Twilio numbers first
-  const numbers = await prisma.phoneNumber.findMany({ where: { userId: id }, select: { twilioSid: true } })
+  const numbers = await prisma.phoneNumber.findMany({ where: { userId: id }, select: { twilioSid: true, phoneNumber: true } })
   await Promise.allSettled(numbers.map(n => releaseNumber(n.twilioSid)))
+  await Promise.allSettled(numbers.map(n => prisma.releasedNumber.upsert({
+    where: { phoneNumber: n.phoneNumber },
+    update: { releasedAt: new Date() },
+    create: { phoneNumber: n.phoneNumber },
+  })))
 
   await prisma.user.delete({ where: { id } })
   return NextResponse.json({ ok: true, releasedNumbers: numbers.length })

@@ -53,7 +53,8 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   PhoneNumber: 'PhoneNumber',
-  Message: 'Message'
+  Message: 'Message',
+  ReleasedNumber: 'ReleasedNumber'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -111,6 +112,15 @@ export const MessageScalarFieldEnum = {
 } as const
 
 export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
+
+
+export const ReleasedNumberScalarFieldEnum = {
+  id: 'id',
+  phoneNumber: 'phoneNumber',
+  releasedAt: 'releasedAt'
+} as const
+
+export type ReleasedNumberScalarFieldEnum = (typeof ReleasedNumberScalarFieldEnum)[keyof typeof ReleasedNumberScalarFieldEnum]
 
 
 export const SortOrder = {

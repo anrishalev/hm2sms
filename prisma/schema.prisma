@@ -43,6 +43,12 @@ model Message {
   receivedAt    DateTime    @default(now())
 }
 
+model ReleasedNumber {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique
+  releasedAt  DateTime @default(now())
+}
+
 enum Role {
   ADMIN
   USER
