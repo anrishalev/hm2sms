@@ -48,6 +48,12 @@ export default function AdminPage() {
   const [syncUserId, setSyncUserId] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [bulkText, setBulkText] = useState('')
+  const [bulkResults, setBulkResults] = useState<{ number: string; status: string }[]>([])
+  const [bulkChecking, setBulkChecking] = useState(false)
+  const [moveNumberId, setMoveNumberId] = useState<string | null>(null)
+  const [moveToUserId, setMoveToUserId] = useState('')
+  const [moveMsg, setMoveMsg] = useState('')
 
   async function fetchUsers() {
     const res = await fetch('/api/admin/users')
@@ -149,6 +155,37 @@ export default function AdminPage() {
       fetchUsers()
     } else {
       setSyncMsg(data.error ?? 'Sync failed')
+    }
+  }
+
+  async function handleBulkCheck() {
+    const numbers = bulkText.split('\n').map(n => n.trim()).filter(Boolean)
+    if (!numbers.length) return
+    setBulkChecking(true)
+    const res = await fetch('/api/admin/numbers/bulk-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numbers }),
+    })
+    const data = await res.json()
+    setBulkResults(data.results ?? [])
+    setBulkChecking(false)
+  }
+
+  async function handleMove(e: React.FormEvent) {
+    e.preventDefault()
+    if (!moveNumberId || !moveToUserId) return
+    const res = await fetch(`/api/admin/numbers/${moveNumberId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: moveToUserId }),
+    })
+    const data = await res.json()
+    setMoveMsg(res.ok ? '✓ Moved' : (data.error ?? 'Failed'))
+    if (res.ok) {
+      fetchUsers()
+      if (expandedUser) fetchUserNumbers(expandedUser)
+      setTimeout(() => { setMoveNumberId(null); setMoveMsg('') }, 1500)
     }
   }
 
@@ -371,7 +408,9 @@ export default function AdminPage() {
                                   <td className="py-1.5 text-green-600">{n.status}</td>
                                   <td className="py-1.5">{n.renewalDate.slice(0, 10)}</td>
                                   <td className="py-1.5">
-                                    <button onClick={() => handleReleaseNumber(n.id, n.phoneNumber, u.id)}
+                                    <button onClick={() => { setMoveNumberId(n.id); setMoveToUserId(''); setMoveMsg('') }}
+                                      className="text-blue-400 hover:underline mr-2">Move</button>
+                                  <button onClick={() => handleReleaseNumber(n.id, n.phoneNumber, u.id)}
                                       className="text-red-400 hover:underline">Release</button>
                                   </td>
                                 </tr>
@@ -388,6 +427,66 @@ export default function AdminPage() {
           </tbody>
         </table>
       </section>
+
+      {/* Bulk Check Numbers */}
+      <section className="bg-white rounded-lg p-6 shadow-sm">
+        <h2 className="font-bold mb-1">Bulk Check Numbers</h2>
+        <p className="text-xs text-gray-400 mb-4">Paste a list of numbers (one per line) to see which are already owned on Twilio before buying</p>
+        <textarea
+          value={bulkText}
+          onChange={e => setBulkText(e.target.value)}
+          placeholder={"+447700900000\n+447700900001\n+447700900002"}
+          className="w-full h-32 px-3 py-2 bg-gray-100 rounded text-sm font-mono mb-3 resize-none"
+        />
+        <Button onClick={handleBulkCheck} disabled={bulkChecking}>
+          {bulkChecking ? 'Checking...' : 'Check Numbers'}
+        </Button>
+        {bulkResults.length > 0 && (
+          <table className="w-full text-sm mt-4">
+            <thead>
+              <tr className="text-left border-b border-gray-200">
+                <th className="pb-2">Number</th>
+                <th className="pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulkResults.map(r => (
+                <tr key={r.number} className="border-b border-gray-100">
+                  <td className="py-2 font-mono text-xs">{r.number}</td>
+                  <td className="py-2">
+                    {r.status === 'already_owned' && <span className="text-green-600 text-xs">✓ Already in dashboard</span>}
+                    {r.status === 'on_twilio_not_db' && <span className="text-orange-500 text-xs">⚠ On Twilio, not in dashboard (use Sync)</span>}
+                    {r.status === 'not_owned' && <span className="text-gray-400 text-xs">✗ Not owned — safe to buy</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* Move Number Modal */}
+      {moveNumberId && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80 space-y-4 shadow-xl">
+            <h2 className="font-bold">Move Number to Another User</h2>
+            <form onSubmit={handleMove} className="space-y-3">
+              <select value={moveToUserId} onChange={e => setMoveToUserId(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-100 rounded text-sm" required>
+                <option value="">Select user...</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.email} ({u.role})</option>
+                ))}
+              </select>
+              {moveMsg && <p className={`text-sm ${moveMsg.startsWith('✓') ? 'text-green-600' : 'text-red-500'}`}>{moveMsg}</p>}
+              <div className="flex gap-3">
+                <Button type="submit" className="flex-1">Move</Button>
+                <Button type="button" variant="outline" onClick={() => { setMoveNumberId(null); setMoveMsg('') }} className="flex-1">Cancel</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Reset Password Modal */}
       {resetUserId && (

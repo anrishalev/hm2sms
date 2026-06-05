@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
 
       const { sid, phoneNumber, country } = type === 'UK' ? await buyUKNumber() : await buyEUNumber()
 
+      // Skip if already in DB
+      const existing = await prisma.phoneNumber.findUnique({ where: { phoneNumber } })
+      if (existing) { results.push({ phoneNumber, success: false, error: 'Already owned' }); continue }
+
       await prisma.phoneNumber.create({
         data: {
           userId: session.user.id,
