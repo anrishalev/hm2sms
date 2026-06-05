@@ -5,8 +5,8 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-const WEBHOOK_URL = appUrl.startsWith('http://localhost') ? undefined : `${appUrl}/api/webhook/sms`
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? ''
+const WEBHOOK_URL = !appUrl || appUrl.startsWith('http://localhost') ? undefined : `${appUrl}/api/webhook/sms`
 
 // Fetch approved bundle countries from Twilio automatically
 async function getApprovedEUCountries(): Promise<string[]> {
