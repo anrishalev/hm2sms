@@ -454,9 +454,9 @@ export default function AdminPage() {
                 <tr key={r.number} className="border-b border-gray-100">
                   <td className="py-2 font-mono text-xs">{r.number}</td>
                   <td className="py-2">
-                    {r.status === 'already_owned' && <span className="text-green-600 text-xs">✓ Already in dashboard</span>}
-                    {r.status === 'on_twilio_not_db' && <span className="text-orange-500 text-xs">⚠ On Twilio, not in dashboard (use Sync)</span>}
-                    {r.status === 'not_owned' && <span className="text-gray-400 text-xs">✗ Not owned — safe to buy</span>}
+                    {r.status === 'already_owned' && <span className="text-green-600 text-xs">✓ You own this number (in dashboard)</span>}
+                    {r.status === 'on_twilio_not_db' && <span className="text-orange-500 text-xs">⚠ You own this on Twilio but it's not in the dashboard — click Sync to import it</span>}
+                    {r.status === 'not_owned' && <span className="text-gray-400 text-xs">✗ You don't own this number — you can buy it</span>}
                   </td>
                 </tr>
               ))}
