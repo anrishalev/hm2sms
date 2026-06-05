@@ -10,12 +10,14 @@ export async function POST(req: NextRequest) {
   const from = formData.get('From') as string
   const body = formData.get('Body') as string
 
-  const phoneNumber = await prisma.phoneNumber.findUnique({ where: { phoneNumber: to } })
+  // Process in background — don't block Twilio response
+  ;(async () => {
+    const phoneNumber = await prisma.phoneNumber.findUnique({ where: { phoneNumber: to } })
+    if (!phoneNumber) return
 
-  if (phoneNumber) {
     await prisma.message.create({
       data: { phoneNumberId: phoneNumber.id, fromNumber: from, body },
-    })
+    }).catch(() => {})
 
     const user = await prisma.user.findUnique({
       where: { id: phoneNumber.userId },
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (user?.emailNotifEnabled && user?.email) {
       sendEmailNotification(user.email, to, from, body).catch(console.error)
     }
-  }
+  })().catch(console.error)
 
   return new NextResponse(EMPTY_TWIML, {
     status: 200,

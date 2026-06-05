@@ -23,14 +23,20 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? ''
   const webhookUrl = appUrl.startsWith('http://localhost') ? undefined : `${appUrl}/api/webhook/sms`
 
+  // Update webhook on ALL Twilio numbers missing it
+  if (webhookUrl) {
+    await Promise.allSettled(
+      twilioNumbers
+        .filter(n => !n.smsUrl || n.smsUrl !== webhookUrl)
+        .map(n => client.incomingPhoneNumbers(n.sid).update({ smsUrl: webhookUrl, smsMethod: 'POST' }))
+    )
+  }
+
   // Sync missing numbers
   const dbSids = new Set(dbNumbers.map(n => n.twilioSid))
   const missingNumbers = twilioNumbers.filter(n => !dbSids.has(n.sid))
 
   for (const n of missingNumbers) {
-    if (webhookUrl && !n.smsUrl) {
-      await client.incomingPhoneNumbers(n.sid).update({ smsUrl: webhookUrl, smsMethod: 'POST' }).catch(() => {})
-    }
     const phone = n.phoneNumber
     const isUK = phone.startsWith('+44')
     const countryType = isUK ? 'UK' : 'EU'
