@@ -23,31 +23,33 @@ async function getApprovedEUCountries(): Promise<string[]> {
   }
 }
 
-export async function buyUKNumber() {
-  const available = await client.availablePhoneNumbers('GB').mobile.list({ limit: 1 })
-  if (!available.length) throw new Error('No UK numbers available')
+export async function buyUKNumber(usedNumbers: Set<string>) {
+  const available = await client.availablePhoneNumbers('GB').mobile.list({ limit: 20 })
+  const candidate = available.find(n => !usedNumbers.has(n.phoneNumber))
+  if (!candidate) throw new Error('No new UK numbers available')
 
   const purchased = await client.incomingPhoneNumbers.create({
-    phoneNumber: available[0].phoneNumber,
+    phoneNumber: candidate.phoneNumber,
     bundleSid: process.env.TWILIO_BUNDLE_SID,
     ...(WEBHOOK_URL ? { smsUrl: WEBHOOK_URL, smsMethod: 'POST' } : {}),
   })
   return { sid: purchased.sid, phoneNumber: purchased.phoneNumber, country: 'GB' }
 }
 
-export async function buyEUNumber() {
+export async function buyEUNumber(usedNumbers: Set<string>) {
   const countries = await getApprovedEUCountries()
   for (const country of countries) {
     try {
-      const available = await client.availablePhoneNumbers(country).local.list({ limit: 1 })
-      if (!available.length) continue
+      const available = await client.availablePhoneNumbers(country).local.list({ limit: 20 })
+      const candidate = available.find(n => !usedNumbers.has(n.phoneNumber))
+      if (!candidate) continue
       const bundles = await client.numbers.v2.regulatoryCompliance.bundles.list({
         status: 'twilio-approved',
         isoCountry: country,
       })
       const bundleSid = bundles[0]?.sid
       const purchased = await client.incomingPhoneNumbers.create({
-        phoneNumber: available[0].phoneNumber,
+        phoneNumber: candidate.phoneNumber,
         ...(bundleSid ? { bundleSid } : {}),
         ...(WEBHOOK_URL ? { smsUrl: WEBHOOK_URL, smsMethod: 'POST' } : {}),
       })

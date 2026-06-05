@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { buyUKNumber, buyEUNumber, releaseNumber } from '@/lib/twilio'
+import { buyUKNumber, buyEUNumber } from '@/lib/twilio'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -16,22 +16,25 @@ export async function POST(req: NextRequest) {
 
   const results: { phoneNumber: string; success: boolean; error?: string }[] = []
 
+  const [dbNumbers, releasedNumbers] = await Promise.all([
+    prisma.phoneNumber.findMany({ select: { phoneNumber: true } }),
+    prisma.releasedNumber.findMany({ select: { phoneNumber: true } }),
+  ])
+  const usedNumbers = new Set([
+    ...dbNumbers.map(n => n.phoneNumber),
+    ...releasedNumbers.map(n => n.phoneNumber),
+  ])
+
   for (let i = 0; i < qty; i++) {
     try {
       const renewalDate = new Date()
       renewalDate.setMonth(renewalDate.getMonth() + 1)
 
-      const { sid, phoneNumber, country } = type === 'UK' ? await buyUKNumber() : await buyEUNumber()
+      const { sid, phoneNumber, country } = type === 'UK'
+        ? await buyUKNumber(usedNumbers)
+        : await buyEUNumber(usedNumbers)
 
-      // Skip if already in DB or previously used
-      const existing = await prisma.phoneNumber.findUnique({ where: { phoneNumber } })
-      if (existing) { results.push({ phoneNumber, success: false, error: 'Already owned' }); continue }
-      const wasReleased = await prisma.releasedNumber.findUnique({ where: { phoneNumber } })
-      if (wasReleased) {
-        await releaseNumber(sid)
-        results.push({ phoneNumber, success: false, error: 'Previously used — skipped' })
-        continue
-      }
+      usedNumbers.add(phoneNumber)
 
       await prisma.phoneNumber.create({
         data: {
