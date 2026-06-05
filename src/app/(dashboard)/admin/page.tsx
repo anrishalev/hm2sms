@@ -221,8 +221,8 @@ export default function AdminPage() {
             <select value={syncUserId} onChange={(e) => setSyncUserId(e.target.value)}
               className="w-full px-4 py-2 bg-gray-100 rounded text-sm" required>
               <option value="">Select user...</option>
-              {users.filter((u) => u.role === 'USER').map((u) => (
-                <option key={u.id} value={u.id}>{u.email}</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.email} ({u.role})</option>
               ))}
             </select>
           </div>
