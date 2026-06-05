@@ -94,8 +94,8 @@ export default function AdminPage() {
 
   async function handleDelete(id: string, email: string, numberCount: number) {
     const msg = numberCount > 0
-      ? `Delete ${email}? This will also release their ${numberCount} Twilio number(s) — they will stop working immediately.`
-      : `Delete ${email}?`
+      ? `Delete user ${email}?\n\nThis will permanently delete the account AND release their ${numberCount} Twilio number(s) from Twilio immediately.\n\nAll SMS to those numbers will stop. This cannot be undone.`
+      : `Delete user ${email}?\n\nThis will permanently delete the account. This cannot be undone.`
     if (!confirm(msg)) return
     const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' })
     const data = await res.json()
@@ -104,7 +104,7 @@ export default function AdminPage() {
   }
 
   async function handleReleaseNumber(numberId: string, phoneNumber: string, userId: string) {
-    if (!confirm(`Release ${phoneNumber}? It will be removed from Twilio immediately.`)) return
+    if (!confirm(`Release ${phoneNumber}?\n\nThis will permanently remove the number from Twilio. All incoming SMS to this number will stop immediately. This cannot be undone.`)) return
     await fetch(`/api/admin/numbers/${numberId}`, { method: 'DELETE' })
     fetchUserNumbers(userId)
     fetchUsers()

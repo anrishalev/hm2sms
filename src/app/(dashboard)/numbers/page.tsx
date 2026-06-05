@@ -83,8 +83,8 @@ export default function NumbersPage() {
     fetchNumbers()
   }
 
-  async function handleRelease(id: string) {
-    if (!confirm('Release this number? Cannot be undone.')) return
+  async function handleRelease(id: string, phoneNumber: string) {
+    if (!confirm(`Release ${phoneNumber}?\n\nThis will permanently remove the number from Twilio. All incoming SMS to this number will stop. This cannot be undone.`)) return
     await fetch(`/api/numbers/${id}`, { method: 'DELETE' })
     fetchNumbers()
   }
@@ -134,7 +134,7 @@ export default function NumbersPage() {
                 <td className="py-3">{n.renewalDate.slice(0, 10)}</td>
                 <td className="py-3 text-green-500 font-medium">{n.status === 'ACTIVE' ? 'Active' : 'Inactive'}</td>
                 <td className="py-3">
-                  <button onClick={() => handleRelease(n.id)} className="text-xs text-red-400 hover:underline">
+                  <button onClick={() => handleRelease(n.id, n.phoneNumber)} className="text-xs text-red-400 hover:underline">
                     Release
                   </button>
                 </td>
