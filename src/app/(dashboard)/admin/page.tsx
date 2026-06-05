@@ -273,6 +273,43 @@ export default function AdminPage() {
         </form>
       </section>
 
+      {/* Bulk Check Numbers */}
+      <section className="bg-white rounded-lg p-6 shadow-sm">
+        <h2 className="font-bold mb-1">Bulk Check Numbers</h2>
+        <p className="text-xs text-gray-400 mb-4">Paste a list of numbers (one per line) to see which are already owned on Twilio before buying</p>
+        <textarea
+          value={bulkText}
+          onChange={e => setBulkText(e.target.value)}
+          placeholder={"+447700900000\n+447700900001\n+447700900002"}
+          className="w-full h-32 px-3 py-2 bg-gray-100 rounded text-sm font-mono mb-3 resize-none"
+        />
+        <Button onClick={handleBulkCheck} disabled={bulkChecking}>
+          {bulkChecking ? 'Checking...' : 'Check Numbers'}
+        </Button>
+        {bulkResults.length > 0 && (
+          <table className="w-full text-sm mt-4">
+            <thead>
+              <tr className="text-left border-b border-gray-200">
+                <th className="pb-2">Number</th>
+                <th className="pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bulkResults.map(r => (
+                <tr key={r.number} className="border-b border-gray-100">
+                  <td className="py-2 font-mono text-xs">{r.number}</td>
+                  <td className="py-2">
+                    {r.status === 'already_owned' && <span className="text-green-600 text-xs">✓ You own this number (in dashboard)</span>}
+                    {r.status === 'on_twilio_not_db' && <span className="text-orange-500 text-xs">⚠ You own this on Twilio but it's not in the dashboard — click Sync to import it</span>}
+                    {r.status === 'not_owned' && <span className="text-gray-400 text-xs">✗ You don't own this number — you can buy it</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
       {/* Usage & Billing Overview */}
       {users.filter(u => u.role === 'USER').length > 0 && (() => {
         const clients = users.filter(u => u.role === 'USER')
@@ -426,43 +463,6 @@ export default function AdminPage() {
             ))}
           </tbody>
         </table>
-      </section>
-
-      {/* Bulk Check Numbers */}
-      <section className="bg-white rounded-lg p-6 shadow-sm">
-        <h2 className="font-bold mb-1">Bulk Check Numbers</h2>
-        <p className="text-xs text-gray-400 mb-4">Paste a list of numbers (one per line) to see which are already owned on Twilio before buying</p>
-        <textarea
-          value={bulkText}
-          onChange={e => setBulkText(e.target.value)}
-          placeholder={"+447700900000\n+447700900001\n+447700900002"}
-          className="w-full h-32 px-3 py-2 bg-gray-100 rounded text-sm font-mono mb-3 resize-none"
-        />
-        <Button onClick={handleBulkCheck} disabled={bulkChecking}>
-          {bulkChecking ? 'Checking...' : 'Check Numbers'}
-        </Button>
-        {bulkResults.length > 0 && (
-          <table className="w-full text-sm mt-4">
-            <thead>
-              <tr className="text-left border-b border-gray-200">
-                <th className="pb-2">Number</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bulkResults.map(r => (
-                <tr key={r.number} className="border-b border-gray-100">
-                  <td className="py-2 font-mono text-xs">{r.number}</td>
-                  <td className="py-2">
-                    {r.status === 'already_owned' && <span className="text-green-600 text-xs">✓ You own this number (in dashboard)</span>}
-                    {r.status === 'on_twilio_not_db' && <span className="text-orange-500 text-xs">⚠ You own this on Twilio but it's not in the dashboard — click Sync to import it</span>}
-                    {r.status === 'not_owned' && <span className="text-gray-400 text-xs">✗ You don't own this number — you can buy it</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
       </section>
 
       {/* Move Number Modal */}
