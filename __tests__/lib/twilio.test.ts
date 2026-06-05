@@ -22,13 +22,13 @@ jest.mock('twilio', () => {
 import { buyUKNumber, buyEUNumber, releaseNumber } from '@/lib/twilio'
 
 test('buyUKNumber returns sid and phoneNumber', async () => {
-  const result = await buyUKNumber()
+  const result = await buyUKNumber(new Set())
   expect(result.sid).toBe('PN123')
   expect(result.phoneNumber).toBe('+441234567890')
 })
 
 test('buyEUNumber returns a number', async () => {
-  const result = await buyEUNumber()
+  const result = await buyEUNumber(new Set())
   expect(result.phoneNumber).toBeDefined()
 })
 

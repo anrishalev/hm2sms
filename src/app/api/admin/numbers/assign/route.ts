@@ -17,12 +17,25 @@ export async function POST(req: NextRequest) {
   const qty = Math.min(Math.max(1, parseInt(quantity)), 100)
   const results: { phoneNumber: string; success: boolean; error?: string }[] = []
 
+  const [dbNumbers, releasedNumbers] = await Promise.all([
+    prisma.phoneNumber.findMany({ select: { phoneNumber: true } }),
+    prisma.releasedNumber.findMany({ select: { phoneNumber: true } }),
+  ])
+  const usedNumbers = new Set([
+    ...dbNumbers.map(n => n.phoneNumber),
+    ...releasedNumbers.map(n => n.phoneNumber),
+  ])
+
   for (let i = 0; i < qty; i++) {
     try {
       const renewalDate = new Date()
       renewalDate.setMonth(renewalDate.getMonth() + 1)
 
-      const { sid, phoneNumber, country } = type === 'UK' ? await buyUKNumber() : await buyEUNumber()
+      const { sid, phoneNumber, country } = type === 'UK'
+        ? await buyUKNumber(usedNumbers)
+        : await buyEUNumber(usedNumbers)
+
+      usedNumbers.add(phoneNumber)
 
       await prisma.phoneNumber.create({
         data: { userId, twilioSid: sid, phoneNumber, countryType: type, country: country ?? null, renewalDate },
