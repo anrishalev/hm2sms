@@ -12,8 +12,10 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
   const search = searchParams.get('search') ?? ''
 
+  const isAdmin = session.user.role === 'ADMIN'
+
   const userNumbers = await prisma.phoneNumber.findMany({
-    where: { userId: session.user.id },
+    where: isAdmin ? {} : { userId: session.user.id },
     select: { id: true },
   })
   const numberIds = userNumbers.map((n: { id: string }) => n.id)
